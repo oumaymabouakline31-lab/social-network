@@ -1,0 +1,10 @@
+CREATE INDEX idx_follows_follower ON follows(follower_id);
+CREATE INDEX idx_follows_followee ON follows(followee_id);
+CREATE INDEX idx_posts_author ON posts(author_id);
+CREATE INDEX idx_posts_group ON posts(group_id);
+CREATE INDEX idx_comments_post ON comments(post_id);
+CREATE INDEX idx_group_members_group ON group_members(group_id);
+CREATE INDEX idx_group_members_user ON group_members(user_id);
+CREATE INDEX idx_messages_sender_receiver ON messages(sender_id, receiver_id);
+CREATE INDEX idx_group_messages_group ON group_messages(group_id);
+CREATE INDEX idx_notifications_user ON notifications(user_id);
