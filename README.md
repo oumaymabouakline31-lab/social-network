@@ -1,140 +1,158 @@
 # Social Network
 
-This repository contains a social network web application with separate frontend and backend services.
+A Facebook-like social network with followers, profiles, posts, groups, real-time chat, and notifications.
 
-- `backend/` - Spring Boot backend using Java 21, Spring Boot 4, Flyway, SQLite, WebSocket, and Spring Security.
-- `frontend/` - Next.js frontend using React 19, Tailwind CSS, and a simple auth context.
-- `docker-compose.yml` - optional Docker Compose setup for both services.
+**Stack:** Next.js (frontend) · Spring Boot 4.1 (backend) · SQLite + Flyway (database) · Docker
+
+---
 
 ## Prerequisites
 
-Choose one of the following environments depending on your setup.
+You only need two things installed, since the whole app runs in Docker:
 
-### Recommended: Docker (Linux or Windows)
+- **Docker Desktop** — [docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop/)
+- **Git**
 
-- Docker Desktop or Docker Engine installed
-- Docker Compose available
+> **Windows users:** Docker Desktop requires virtualization (WSL2) to be enabled. If Docker Desktop shows a "virtualization support not detected" error, enable virtualization in your BIOS/UEFI settings, then run in an **admin PowerShell**:
+> ```powershell
+> dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+> dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+> wsl --update
+> ```
+> Restart your PC afterward.
 
-### Manual install
+---
 
-#### Linux
+## Installation & Setup
 
-- Node.js 20+ / npm 10+
-- Java 21
-- Git
-
-#### Windows
-
-- Node.js 20+ / npm 10+
-- Java 21
-- Git
-- PowerShell or Command Prompt
-
-> The backend includes the Maven wrapper (`mvnw` and `mvnw.cmd`), so you do not need a separate Maven installation if you use the wrapper.
-
-## Install and run the full project
-
-### Option 1: Docker Compose (best for new machines)
-
-From the repository root:
+### Linux / macOS
 
 ```bash
+git clone https://learn.zone01oujda.ma/git/relmallo/social-network
+cd social-network
 docker compose up --build
 ```
 
-This builds and starts both services:
+### Windows
 
-- Backend on `http://localhost:8080`
-- Frontend on `http://localhost:3000`
-
-Press `Ctrl+C` to stop the services, or use `docker compose down`.
-
-### Option 2: Manual install
-
-#### Backend
-
-1. Open a terminal in `backend`
-2. Run the backend:
-
-Linux/macOS:
+Use **Git Bash** (installed with Git for Windows) rather than PowerShell/CMD — it behaves like Linux and avoids syntax mismatches with the commands below.
 
 ```bash
-./mvnw spring-boot:run
+git clone https://learn.zone01oujda.ma/git/relmallo/social-network
+cd social-network
+docker compose up --build
 ```
 
-Windows PowerShell / Command Prompt:
+### First run vs later runs
 
-```powershell
-mvnw.cmd spring-boot:run
+- **First run** takes several minutes — Docker downloads base images (Maven, JDK, Node) and compiles both apps from scratch.
+- **Later runs**, if you haven't changed dependencies (`pom.xml` / `package.json`), are much faster:
+  ```bash
+  docker compose up          # fast, reuses cached build
+  docker compose up --build  # only needed after changing code/dependencies
+  ```
+- **Stop everything:**
+  ```bash
+  docker compose down
+  ```
+
+Once running, open:
+- **Frontend:** [http://localhost:3000](http://localhost:3000)
+- **Backend API:** [http://localhost:8080](http://localhost:8080)
+
+---
+
+## Project Structure
+
+```
+social-network/
+├── backend/                  # Spring Boot API
+├── frontend/                 # Next.js app
+└── docker-compose.yml        # Runs both containers together
 ```
 
-By default, the backend listens on `http://localhost:8080`.
+### `backend/`
 
-#### Frontend
-
-1. Open a terminal in `frontend`
-2. Install dependencies:
-
-```bash
-npm install
+```
+backend/
+├── Dockerfile
+├── pom.xml                                  # Maven dependencies & build config
+├── src/main/java/com/example/socialnetwork/
+│   ├── SocialNetworkApplication.java        # Entry point
+│   ├── config/
+│   │   ├── SecurityConfig.java              # Auth rules, password encoding, session policy
+│   │   └── CorsConfig.java                  # Allows the frontend origin to call the API with cookies
+│   ├── controller/
+│   │   └── AuthController.java              # /api/auth/register, /login, /me, /logout
+│   ├── entity/
+│   │   └── User.java                        # JPA entity mapped to the `users` table
+│   ├── repository/
+│   │   └── UserRepository.java              # Data access for User (Spring Data JPA)
+│   ├── dto/                                 # Request/response data shapes (empty — extend as needed)
+│   ├── service/                             # Business logic layer (empty — extend as needed)
+│   └── websocket/                           # WebSocket config & chat handlers (empty — extend as needed)
+└── src/main/resources/
+    ├── application.yml                      # Server port, datasource, Flyway, session config
+    └── db/migration/sqlite/                 # Flyway migrations — one file per schema change
+        ├── V1__create_users_table.sql
+        ├── V2__create_follows_table.sql
+        ├── V3__create_posts_table.sql
+        ├── V4__create_post_allowed_viewers_table.sql
+        ├── V5__create_comments_table.sql
+        ├── V6__create_groups_table.sql
+        ├── V7__create_group_members_table.sql
+        ├── V8__create_events_table.sql
+        ├── V9__create_event_responses_table.sql
+        ├── V10__create_messages_table.sql
+        ├── V11__create_group_messages_table.sql
+        ├── V12__create_notifications_table.sql
+        └── V13__create_indexes.sql
 ```
 
-3. Create or update `frontend/.env.local` if needed:
+**How migrations work:** every time the backend starts, Flyway automatically runs any `.sql` file in `db/migration/sqlite/` that hasn't been applied yet, in order (`V1`, `V2`, `V3`...). You never run migrations manually — just add a new `V<next_number>__description.sql` file and restart the app.
 
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8080
+### `frontend/`
+
+```
+frontend/
+├── Dockerfile
+├── package.json                  # npm dependencies & scripts
+├── .env.local                    # NEXT_PUBLIC_API_URL=http://localhost:8080 (not committed to git)
+├── app/
+│   ├── layout.tsx                # Root layout, wraps the app in AuthProvider
+│   ├── login/page.tsx            # Login page
+│   └── register/page.tsx         # Registration page
+├── context/
+│   └── AuthContext.tsx           # Global auth state (current user, login, logout)
+├── lib/
+│   └── api.ts                    # Fetch wrapper that talks to the Spring Boot API
+└── middleware.ts                 # Redirects unauthenticated users to /login
 ```
 
-4. Start the frontend:
+### Root
 
-```bash
-npm run dev
+```
+docker-compose.yml   # Defines the backend + frontend containers, ports, and shared volume
 ```
 
-5. Open the frontend in your browser:
+---
 
-```text
-http://localhost:3000
-```
+## How the pieces fit together
 
-## Notes
+1. **Frontend (port 3000)** sends requests to **Backend (port 8080)** using `fetch(..., { credentials: "include" })`, so the session cookie is sent with every request.
+2. **Backend** authenticates via Spring Security + session cookies (not JWT) — sessions are stored in the database via Spring Session JDBC, so a user stays logged in even if the backend restarts.
+3. **Backend** talks to **SQLite**, stored in a Docker-managed volume (`db-data`) so data survives container restarts.
+4. **Flyway** owns the database schema — all tables are created/updated through the migration files, never manually.
 
-- The frontend expects the backend API at `http://localhost:8080` unless you change `NEXT_PUBLIC_API_URL`.
-- The backend stores data in a Docker volume when using Docker Compose.
-- If you run manually, the backend uses the `data/` directory under `backend` for SQLite and Flyway migrations.
+---
 
-## Useful commands
+## Common Issues
 
-From the repository root:
+| Problem | Fix |
+|---|---|
+| `docker compose up` fails with a Docker API/virtualization error | See the Windows note above — enable virtualization + WSL2, restart |
+| `npm ci` fails inside the frontend build | Run `npm install` locally first to sync `package-lock.json`, commit it, then rebuild |
+| Backend can't find the SQLite file (`path ... does not exist`) | Make sure `application.yml`'s datasource URL is `jdbc:sqlite:/data/social-network.db` (absolute path, matching the Docker volume) |
+| `mkdir a b` fails in PowerShell | Use Git Bash instead, or run `mkdir a` then `mkdir b` separately |
 
-- `docker compose up --build` - build and run both services with Docker
-- `docker compose down` - stop Docker services
-
-Frontend:
-
-- `npm run dev` - start frontend development server
-- `npm run build` - build frontend
-- `npm run start` - run built frontend
-- `npm run lint` - run lint checks
-
-Backend:
-
-- `./mvnw spring-boot:run` or `mvnw.cmd spring-boot:run` - run backend
-- `./mvnw test` or `mvnw.cmd test` - run backend tests
-
-## Files and folders not required in Git
-
-These are generated or local-only files and should not be committed:
-
-- `frontend/.next/`
-- `frontend/node_modules/`
-- `backend/target/`
-- `frontend/.env.local`
-- `backend/.mvn/wrapper/*` is included already; do not remove it if you need the Maven wrapper.
-
-## Tips for another PC
-
-- Clone the repository with Git.
-- If using Docker, `docker compose up --build` is the fastest way to get the app running.
-- If installing manually, make sure Java 21 and Node.js 20+ are installed first.
-- On Windows, use `mvnw.cmd` in the backend and PowerShell or Command Prompt for commands.
+---
