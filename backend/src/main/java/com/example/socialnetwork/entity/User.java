@@ -3,13 +3,15 @@ package com.example.socialnetwork.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import java.io.Serializable;
 import java.time.Instant;
 import java.util.UUID;
 
 @Entity
 @Table(name = "users")
 @Getter @Setter
-public class User {
+public class User implements Serializable {
+    private static final long serialVersionUID = 1L;
     @Id
     private String id = UUID.randomUUID().toString();
     @Column(unique = true, nullable = false)

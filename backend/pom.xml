@@ -14,6 +14,7 @@
     <groupId>com.example</groupId>
     <artifactId>social-network</artifactId>
     <version>0.0.1-SNAPSHOT</version>
+    <packaging>jar</packaging>
     <name>social-network</name>
     <description>Social network backend</description>
 
@@ -80,7 +81,7 @@
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webmvc-test</artifactId>
+            <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
