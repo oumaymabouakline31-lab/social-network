@@ -41,6 +41,20 @@ export default function Home() {
             >
               Log out
             </button>
+            <div className="flex gap-3">
+              <Link
+                href="/profile/me"
+                className="flex-1 rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 text-center"
+              >
+                Voir mon profil
+              </Link>
+              <button
+                onClick={() => logout()}
+                className="flex-1 rounded-lg bg-red-600 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700"
+              >
+                Log out
+              </button>
+            </div>
           </div>
         ) : (
           <div className="mt-6 w-full space-y-4">
