@@ -1,16 +1,21 @@
 package com.example.socialnetwork.controller;
 
-import com.example.socialnetwork.entity.User;
-import com.example.socialnetwork.repository.UserRepository;
+import com.example.socialnetwork.dto.auth.LoginRequest;
+import com.example.socialnetwork.dto.auth.RegisterRequest;
+import com.example.socialnetwork.dto.auth.UserResponse;
+import com.example.socialnetwork.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.util.Map;
 
 @RestController
@@ -18,48 +23,77 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    
-    record RegisterRequest(String email, String password, String firstName,
-                            String lastName, String dateOfBirth,
-                            String nickname, String aboutMe) {}
-    record LoginRequest(String email, String password) {}
-   
-    @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest req, HttpServletRequest httpReq) {
-        if (userRepository.existsByEmail(req.email())) {
-            return ResponseEntity.status(409).body(Map.of("error", "Email already registered"));
-        }
-        User user = new User();
-        user.setEmail(req.email());
-        user.setPasswordHash(passwordEncoder.encode(req.password()));
-        user.setFirstName(req.firstName());
-        user.setLastName(req.lastName());
-        user.setDateOfBirth(req.dateOfBirth());
-        user.setNickname(req.nickname());
-        user.setAboutMe(req.aboutMe());
-        userRepository.save(user);
-       
-        establishSession(httpReq, user);
-        return ResponseEntity.ok(Map.of("id", user.getId(), "email", user.getEmail()));
+    private final AuthService authService;
+
+    /**
+     * Inscription via Multipart (formulaire avec fichier image sélectionné dans la galerie).
+     */
+    @PostMapping(value = "/register", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> registerMultipart(
+            @RequestParam("email") String email,
+            @RequestParam("password") String password,
+            @RequestParam("firstName") String firstName,
+            @RequestParam("lastName") String lastName,
+            @RequestParam("dateOfBirth") String dateOfBirth,
+            @RequestParam(value = "nickname", required = false) String nickname,
+            @RequestParam(value = "aboutMe", required = false) String aboutMe,
+            @RequestParam(value = "avatarFile", required = false) MultipartFile avatarFile,
+            HttpServletRequest httpReq, HttpServletResponse httpRes) {
+        RegisterRequest req = new RegisterRequest(email, password, firstName, lastName, dateOfBirth, null, nickname, aboutMe);
+        return doRegister(req, avatarFile, httpReq, httpRes);
     }
-   
+
+    /**
+     * Inscription standard via JSON (pour compatibilité totale).
+     */
+    @PostMapping(value = "/register", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<?> registerJson(@RequestBody RegisterRequest req, HttpServletRequest httpReq, HttpServletResponse httpRes) {
+        return doRegister(req, null, httpReq, httpRes);
+    }
+
+    private ResponseEntity<?> doRegister(RegisterRequest req, MultipartFile avatarFile, HttpServletRequest httpReq, HttpServletResponse httpRes) {
+        try {
+            UserResponse userResponse = authService.register(req, avatarFile, httpReq, httpRes);
+            return ResponseEntity.status(HttpStatus.CREATED).body(userResponse);
+        } catch (IllegalArgumentException e) {
+            if ("Email already registered".equals(e.getMessage())) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
+            }
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An error occurred during registration"));
+        }
+    }
+
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest req, HttpServletRequest httpReq) {
-        User user = userRepository.findByEmail(req.email()).orElse(null);
-        if (user == null || !passwordEncoder.matches(req.password(), user.getPasswordHash())) {
-            return ResponseEntity.status(401).body(Map.of("error", "Invalid credentials"));
+    public ResponseEntity<?> login(@RequestBody LoginRequest req, HttpServletRequest httpReq, HttpServletResponse httpRes) {
+        try {
+            UserResponse userResponse = authService.login(req, httpReq, httpRes);
+            return ResponseEntity.ok(userResponse);
+        } catch (BadCredentialsException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An error occurred during login"));
         }
-        establishSession(httpReq, user);
-        return ResponseEntity.ok(Map.of("id", user.getId(), "email", user.getEmail()));
     }
-   
-    private void establishSession(HttpServletRequest httpReq, User user) {
-        var authentication = new UsernamePasswordAuthenticationToken(user, null, List.of());
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        httpReq.getSession(true)
-            .setAttribute("SPRING_SECURITY_CONTEXT",
-                SecurityContextHolder.getContext());
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser() {
+        UserResponse user = authService.getCurrentUser();
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Not authenticated"));
+        }
+        return ResponseEntity.ok(user);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+        SecurityContextHolder.clearContext();
+        return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
+
     }
 }

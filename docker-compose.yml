@@ -5,6 +5,7 @@ services:
       - "8080:8080"
     volumes:
       - db-data:/data
+      - uploads-data:/app/uploads
 
   frontend:
     build: ./frontend
@@ -17,3 +18,4 @@ services:
 
 volumes:
   db-data:
+  uploads-data:

@@ -1,3 +1,7 @@
+<<<<<<< HEAD
+[README.md](https://github.com/user-attachments/files/31230391/README.md)
+=======
+>>>>>>> repo-oumayma/oumayma
 # Social Network
 
 A Facebook-like social network with followers, profiles, posts, groups, real-time chat, and notifications.

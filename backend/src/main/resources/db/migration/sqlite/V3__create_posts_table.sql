@@ -4,6 +4,6 @@ CREATE TABLE posts (
     group_id TEXT,
     content TEXT,
     image_url TEXT,
-    privacy TEXT NOT NULL DEFAULT 'public',
+    privacy TEXT NOT NULL DEFAULT 'PUBLIC',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
