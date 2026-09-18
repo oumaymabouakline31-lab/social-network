@@ -57,9 +57,7 @@ export default function RightPanel() {
                     )}
                 </Panel>
 
-                <Panel title="Vous connaissez peut-être">
-                    <Hint>Les suggestions arriveront bientôt.</Hint>
-                </Panel>
+
             </div>
         </aside>
     );
