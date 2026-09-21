@@ -1,5 +1,5 @@
 "use client";
-
+import "./login.css";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -8,8 +8,10 @@ import { useAuth } from "@/context/AuthContext";
 export default function LoginPage() {
     const { login } = useAuth();
     const router = useRouter();
+
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
@@ -17,79 +19,109 @@ export default function LoginPage() {
         e.preventDefault();
         setError(null);
         setLoading(true);
+
         try {
             await login(email, password);
             router.push("/");
         } catch (err) {
-            setError((err as Error).message);
+            setError("Invalid email or password !");
         } finally {
             setLoading(false);
         }
     }
 
     return (
-        <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 p-4 dark:bg-black font-sans">
-            <div className="w-full max-w-md space-y-6 rounded-xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-                <div className="text-center">
-                    <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-                        Sign in to your account
-                    </h1>
-                    <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                        Welcome back to Social Network
-                    </p>
-                </div>
+        <main className="login-page">
+            {/* <div className="background-shape shape-one" />
+            <div className="background-shape shape-two" /> */}
 
-                {error && (
-                    <div role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-950/50 dark:text-red-400">
-                        {error}
-                    </div>
-                )}
+            <section className="login-card">
+                {/* <div className="logo">
+                    <div className="logo-icon">S</div>
+                    <span>Socially</span>
+                </div> */}
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                            Email address
-                        </label>
+                {/* <div className="login-header">
+                    <h1>Welcome back</h1>
+                    <p>Log in to continue to your social network.</p>
+                </div> */}
+
+                <form onSubmit={handleSubmit} className="login-form">
+                    <div className="input-group">
+                        <label htmlFor="email">Email</label>
                         <input
+                            id="email"
                             type="email"
                             placeholder="you@example.com"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
-                            className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                            autoComplete="email"
                         />
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                            Password
-                        </label>
-                        <input
-                            type="password"
-                            placeholder="••••••••"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            className="mt-1 block w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-black focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
-                        />
+                    <div className="input-group">
+                        <div className="password-label">
+                            <label htmlFor="password">Password</label>
+                        </div>
+
+                        <div className="password-input">
+                            <input
+                                id="password"
+                                type={showPassword ? "text" : "password"}
+                                placeholder="Enter your password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                autoComplete="current-password"
+                            />
+
+                            <button
+                                type="button"
+                                className="show-password"
+                                onClick={() => setShowPassword(!showPassword)}
+                                aria-label={
+                                    showPassword
+                                        ? "Hide password"
+                                        : "Show password"
+                                }
+                            >
+                                {showPassword ? "Hide" : "Show"}
+                            </button>
+                        </div>
                     </div>
+
+                    {error && (
+                        <div className="error-message" role="alert">
+                            <p>{error}</p>
+                        </div>
+                    )}
 
                     <button
                         type="submit"
+                        className="login-button"
                         disabled={loading}
-                        className="w-full rounded-lg bg-black py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
                     >
-                        {loading ? "Signing in..." : "Sign in"}
+                        {loading ? (
+                            <>
+                                <span className="spinner" />
+                                Logging in...
+                            </>
+                        ) : (
+                            "Log in"
+                        )}
                     </button>
                 </form>
 
-                <p className="text-center text-sm text-zinc-500 dark:text-zinc-400">
-                    Don&apos;t have an account?{" "}
-                    <Link href="/register" className="font-semibold text-zinc-900 underline hover:text-black dark:text-zinc-100">
-                        Register here
-                    </Link>
-                </p>
-            </div>
-        </div>
+                {/* <div className="divider">
+                    <span>or</span>
+                </div>
+
+                <p className="register-text">
+                    Don't have an account?{" "}
+                    <Link href="/register">Create an account</Link>
+                </p> */}
+            </section>
+        </main>
     );
 }
