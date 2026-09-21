@@ -2,27 +2,25 @@
 
 import { useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { Post, PostPrivacy, postsApi } from "@/lib/postsApi";
+import { Post, postsApi } from "@/lib/postsApi";
+import { groupsApi } from "@/lib/groupsApi";
 import Avatar, { resolveAvatarUrl } from "./Avatar";
-import UserPicker, { PickedUser } from "./UserPicker";
-
 import { ImagePlus, Smile, X, Loader2 } from "lucide-react";
 
-type PostComposerProps = {
+type GroupPostComposerProps = {
+    groupId: string;
     onCreated: (post: Post) => void;
 };
 
 const MOODS = ["😊", "😄", "🔥", "❤️", "🎉", "🤔", "😎", "🥳"];
 
-export default function PostComposer({ onCreated }: PostComposerProps) {
+export default function GroupPostComposer({ groupId, onCreated }: GroupPostComposerProps) {
     const { user } = useAuth();
     const [content, setContent] = useState("");
     const [imageUrl, setImageUrl] = useState("");
     const [preview, setPreview] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
     const [showMoods, setShowMoods] = useState(false);
-    const [privacy, setPrivacy] = useState<PostPrivacy>("PUBLIC");
-    const [allowedViewers, setAllowedViewers] = useState<PickedUser[]>([]);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -39,7 +37,7 @@ export default function PostComposer({ onCreated }: PostComposerProps) {
         setError(null);
 
         try {
-            const url = await postsApi.uploadPostImage(file);
+            const url = await postsApi.uploadGroupPostImage(groupId, file);
             setImageUrl(url);
             setPreview(resolveAvatarUrl(url));
         } catch (err) {
@@ -63,17 +61,13 @@ export default function PostComposer({ onCreated }: PostComposerProps) {
         setSubmitting(true);
         setError(null);
         try {
-            const created = await postsApi.createPost({
+            const created = await groupsApi.createGroupPost(groupId, {
                 content: content.trim() || undefined,
                 imageUrl: imageUrl || undefined,
-                privacy,
-                allowedViewerIds: privacy === "PRIVATE" ? allowedViewers.map((v) => v.id) : undefined,
             });
             onCreated(created);
             setContent("");
             clearImage();
-            setPrivacy("PUBLIC");
-            setAllowedViewers([]);
         } catch (err) {
             setError((err as Error).message);
         } finally {
@@ -100,7 +94,7 @@ export default function PostComposer({ onCreated }: PostComposerProps) {
                 <textarea
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
-                    placeholder={`Quoi de neuf, ${user?.firstName ?? ""} ?`}
+                    placeholder="Partagez quelque chose avec le groupe..."
                     rows={3}
                     className="min-h-[64px] flex-1 resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-indigo-400 focus:bg-white"
                 />
@@ -143,23 +137,9 @@ export default function PostComposer({ onCreated }: PostComposerProps) {
                 </div>
             )}
 
-            {privacy === "PRIVATE" && (
-                <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
-                    <p className="mb-2 text-xs font-medium text-slate-600">Choisir qui peut voir ce post</p>
-                    <UserPicker
-                        selected={allowedViewers}
-                        onChange={setAllowedViewers}
-                        placeholder="Rechercher un utilisateur à autoriser..."
-                    />
-                    <p className="mt-2 text-[11px] text-slate-400">
-                        Si personne n&apos;est sélectionné, seul vous verrez ce post.
-                    </p>
-                </div>
-            )}
-
             {error && <p className="mt-2 text-xs text-rose-500">{error}</p>}
 
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3">
+            <div className="mt-3 flex items-center justify-between gap-3 border-t border-slate-100 pt-3">
                 <div className="flex items-center gap-1">
                     <button
                         type="button"
@@ -180,15 +160,6 @@ export default function PostComposer({ onCreated }: PostComposerProps) {
                     >
                         <Smile size={16} className="inline mr-1" /> Humeur
                     </button>
-                    <select
-                        value={privacy}
-                        onChange={(e) => setPrivacy(e.target.value as PostPrivacy)}
-                        className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-xs text-slate-600 outline-none focus:border-indigo-400"
-                    >
-                        <option value="PUBLIC">🌍 Public</option>
-                        <option value="FOLLOWERS">👥 Abonnés</option>
-                        <option value="PRIVATE">🔒 Privé</option>
-                    </select>
                 </div>
 
                 <button
