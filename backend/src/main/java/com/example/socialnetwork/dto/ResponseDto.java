@@ -12,5 +12,4 @@ import lombok.Setter;
 public class ResponseDto {
     private String id;
     private String message;
-    
 }

@@ -11,6 +11,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import com.example.socialnetwork.repository.NotificationRepository;
+import com.example.socialnetwork.service.NotificationService;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,11 +23,17 @@ public class ProfileService {
 
     private final UserRepository userRepository;
     private final FollowRepository followRepository;
+    private final NotificationService notificationService;
 
-    public ProfileService(UserRepository userRepository, FollowRepository followRepository) {
-        this.userRepository = userRepository;
-        this.followRepository = followRepository;
-    }
+    public ProfileService(
+        UserRepository userRepository,
+        FollowRepository followRepository,
+        NotificationService notificationService
+        ) {
+            this.userRepository = userRepository;
+            this.followRepository = followRepository;
+            this.notificationService = notificationService;
+        }
 
     /**
      * Récupère le profil complet d'un utilisateur selon les règles de confidentialité.
@@ -129,6 +137,14 @@ public class ProfileService {
             follow.setStatus(targetUser.isPublic() ? "accepted" : "pending");
 
             Follow saved = followRepository.save(follow);
+
+            if ("pending".equals(saved.getStatus())) {
+                notificationService.createFollowRequestNotification(
+                        targetUser.getId(),
+                        saved.getId()
+                );
+            }
+
             return FollowResponse.fromFollowee(saved);
         }
     }
